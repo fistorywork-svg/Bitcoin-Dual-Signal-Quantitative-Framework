@@ -49,6 +49,44 @@ The probability output of the Buy-Opportunity Model is denoted as $P_{buy}$.
 
 After both models separately evaluate downside risk and upside opportunity, their probability outputs are combined to calculate the target Bitcoin allocation.
 
+### 3.3 Dual-Model Decision Integration
+
+The following figure illustrates how the Sell-Risk Model and the Buy-Opportunity Model are jointly applied to determine the final Bitcoin position.
+
+```mermaid
+graph TD
+    A["Sell-Risk Model"] --> B{"P_sell greater than 0.17?"}
+
+    B -->|Yes| C["Sell-Risk Override"]
+    C --> D["Target Bitcoin Allocation = 0%"]
+
+    B -->|No| E["Buy-Opportunity Model"]
+    E --> F{"P_buy Range"}
+
+    F -->|"P_buy below 0.30"| G["20%"]
+    F -->|"0.30 to 0.40"| H["40%"]
+    F -->|"0.40 to 0.50"| I["60%"]
+    F -->|"0.50 to 0.59"| J["80%"]
+    F -->|"0.59 or above"| K["100%"]
+
+    D --> L["Final Bitcoin Portfolio Position"]
+    G --> L
+    H --> L
+    I --> L
+    J --> L
+    K --> L
+```
+
+<p align="center">
+  <em>Figure 1. Decision process of the Dual-Model Framework.</em>
+</p>
+
+As shown in Figure 1, the final trading decision is determined in two stages. First, the framework examines the probability output of the Sell-Risk Model, denoted as $P_{sell}$. If $P_{sell} > 0.17$, the Sell-Risk Model takes priority and the target Bitcoin allocation is directly reduced to 0%.
+
+If $P_{sell} \le 0.17$, the framework then refers to the probability output of the Buy-Opportunity Model, denoted as $P_{buy}$, to determine the target Bitcoin allocation.
+
+Through this design, the two models jointly determine the final Bitcoin allocation by integrating downside-risk control with upside-opportunity estimation.
+
 ---
 
 ## 4. Data Selection and Cross-Market Features
