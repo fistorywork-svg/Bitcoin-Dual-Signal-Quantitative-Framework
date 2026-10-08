@@ -1,485 +1,143 @@
-# Bitcoin-Dual-Signal-Quantitative-Framework
-## Dual-Signal Machine Learning Framework for Bitcoin Algorithmic Trading
+# Dual-Signal Quantitative Framework for Bitcoin Trading
 
-A machine-learning-driven dual-signal quantitative trading research project for Bitcoin using Ranger Random Forests, cross-asset signals, and dynamic portfolio allocation.
-
-![R Language](https://img.shields.io/badge/Language-R-blue.svg)
-![Machine Learning](https://img.shields.io/badge/Model-Random%20Forest%20%28Ranger%29-green.svg)
-![Asset Class](https://img.shields.io/badge/Asset-Bitcoin%20%7C%20VIX%20%7C%20Gold-gold.svg)
-![Status](https://img.shields.io/badge/Status-Academic%20Portfolio%20%7C%20Working%20Paper-orange.svg)
-
-> **Author:** Aiden Li (Chia-Yu Li)  
-> **Framework:** Decoupled Sell-Risk and Buy-Opportunity Random Forest Classifiers with Cross-Asset Signals and Multi-Tier Position Management  
-> **Purpose:** Academic Portfolio / Graduate Application Writing Sample  
-> **Implementation:** Source code and raw datasets are maintained privately
+A quantitative trading research project that develops separate Sell-Risk and Buy-Opportunity models for Bitcoin and combines their probability outputs to determine portfolio allocation.
 
 ---
 
-## Executive Summary
+## 1. Research Motivation
 
-This project develops a **Dual-Signal Machine Learning Trading Framework** for Bitcoin.
+The study examines the feasibility of quantitative trading in highly volatile markets; our research subject is based on Bitcoin, which has dramatic price volatility in this trading market and is used as the object of research.
 
-Rather than treating upward opportunities and downside risks as symmetric outcomes of a single prediction model, the framework trains two specialized **Ranger Random Forest probability classifiers**:
-
-1. **Sell-Risk Model:** Estimates the probability that Bitcoin will experience a drawdown of at least 10% within the following 10 days.
-2. **Buy-Opportunity Model:** Estimates the probability that Bitcoin will achieve a gain of at least 10% within the following 10 days.
-
-The two probability signals are subsequently translated into a rule-based portfolio allocation system.
-
-The Sell-Risk Model has override priority. When predicted downside risk exceeds the predefined threshold, the target Bitcoin allocation is reduced to 0%. Otherwise, the predicted Buy-Opportunity probability determines exposure across five target allocation levels:
-
-**20%, 40%, 60%, 80%, and 100%.**
-
-The feature set combines Bitcoin technical indicators with cross-asset information derived from the **VIX** and **Gold/USD**.
-
-Selected predictive features are lagged by one day before model estimation in order to reduce the risk of contemporaneous information leakage.
-
-The current exploratory evaluation focuses primarily on **downside-risk mitigation and capital preservation** rather than absolute return maximization.
+Compared to traditional equities and bonds, Bitcoin exhibits relatively high price volatility; therefore, making it an ideal asset for this study to examine quantitative trading strategies in highly volatile markets.
 
 ---
 
-## Research Motivation
+## 2. Data Period and Evaluation Design
 
-Cryptocurrency markets exhibit substantial volatility, large drawdowns, and asymmetric upside and downside behavior.
+The time span which is used to build the model is from **2018-09-11 to 2026-06-03**, including **2,800 daily data points**.
 
-A single classification model may have difficulty simultaneously identifying both:
+Those data are segmented in chronological order.
 
-- periods of unusually high downside risk;
-- and periods of strong upside opportunity.
+- **Training Data:** First 80% of the total data
+- **Evaluation Data:** Remaining 20% of the total data
+- **Evaluation Period:** 2024-11-21 to 2026-06-03
+- **Evaluation Observations:** 560 daily observations
 
-This project therefore decomposes the trading problem into two specialized prediction tasks and investigates whether their probability outputs can be converted into a systematic portfolio-management framework.
-
-The research objective is not to claim guaranteed profitability. Instead, the project evaluates whether machine-learning probability estimates can contribute to:
-
-- **Downside-risk identification**
-- **Upside-opportunity identification**
-- **Dynamic portfolio exposure management**
-- **Transaction-cost-aware execution**
-- **Capital preservation relative to passive Bitcoin exposure**
+The evaluation data from this period are then used to conduct the model's automated trading test.
 
 ---
 
-## System Architecture and Workflow
+## 3. Dual-Model Framework
 
-```mermaid
-flowchart TD
+Consider the fact that quantitative finance researchers typically formulate their models’ outputs as binary or three-class classification tasks, such as buy/sell or buy/sell/hold.
 
-    A["Bitcoin / VIX / Gold Historical Data"]
-        --> B["Data Cleaning and Date Alignment"]
+However, the use of two models’ outputs to jointly determine the final trading decision has received relatively less attention.
 
-    B --> C["Technical & Cross-Asset Feature Engineering"]
+Accordingly, this study uses the buy signal and the sell signal to develop two models, respectively. The two models estimate the probabilities of an upside opportunity and downside risk, respectively.
 
-    C --> D["1-Day Feature Lagging"]
+### 3.1 Sell-Risk Model
 
-    D --> E["Sell-Risk Model<br/>Ranger Random Forest"]
-    D --> F["Buy-Opportunity Model<br/>Ranger Random Forest"]
+In the Sell-Risk Model, it predicts whether Bitcoin will experience a decline of at least 10% within the next 10 days or not.
 
-    E --> G["Sell-Risk Probability"]
-    F --> H["Buy-Opportunity Probability"]
+The probability output of the Sell-Risk Model is denoted as $P_{sell}$.
 
-    G --> I{"P_sell > 0.17?"}
+### 3.2 Buy-Opportunity Model
 
-    I -->|Yes| J["Target Position = 0%"]
-    I -->|No| K["Map Buy Probability to Position"]
+On the other hand, the Buy-Opportunity Model forecasts whether Bitcoin will achieve a gain of at least 10% within the next 10 days.
 
-    K --> L["20% / 40% / 60% / 80% / 100%"]
+The probability output of the Buy-Opportunity Model is denoted as $P_{buy}$.
 
-    J --> M["Execution & Backtest Engine"]
-    L --> M
-
-    subgraph BEC["Backtest Constraints"]
-        N["Minimum 5-Day Gap Between Executed Trades"]
-        O["0.1% Transaction Fee"]
-        P["Minimum Order Quantity = 0.001 BTC"]
-        Q["Position Adjustment Tolerance = 0.05"]
-    end
-
-    M --- N
-    M --- O
-    M --- P
-    M --- Q
-
-    M --> R["Portfolio Equity Curve"]
-    M --> S["Trade Execution Log"]
-    M --> T["Performance Metrics"]
-```
+After both models separately evaluate downside risk and upside opportunity, their probability outputs are combined to calculate the target Bitcoin allocation.
 
 ---
 
-# Methodology
+## 4. Data Selection and Cross-Market Features
 
-## 1. Data Preparation
+In terms of data selection, in addition to the Bitcoin market data and its technical indicators, this study also includes international gold price (USD/ounce) and the S&P 500 VIX as cross-market information.
 
-The framework uses three daily financial datasets:
+Gold/USD is included to incorporate information from a safe-haven asset into the analysis.
 
-| Dataset | Main Information | Role in the Framework |
-|:---|:---|:---|
-| Bitcoin | Open, High, Low, Close, Volume | Primary traded asset |
-| VIX | Daily closing value | Cross-asset market-risk proxy |
-| Gold/USD | Daily closing value | Cross-asset safe-haven proxy |
+The S&P VIX is included to reflect investors’ perceptions of market risk.
 
-Because Bitcoin trades seven days per week while VIX and Gold observations are not available every day, the latest available VIX and Gold observations are carried forward after date alignment.
+### Bitcoin Features
 
----
+The Bitcoin information used by the models includes:
 
-## 2. Bitcoin Technical Features
+- Volatility over different horizons
+- Daily price range
+- Breakout strength
+- Cumulative return
+- Moving-average features
 
-The Bitcoin dataset is transformed into a set of technical and market-state variables.
+### VIX and Gold/USD Features
 
-| Feature Group | Variables |
-|:---|:---|
-| Returns | Daily log return |
-| Volatility | 5-day volatility, 10-day volatility |
-| Moving Averages | 5-day, 20-day, 60-day moving averages |
-| Trend | 5-day price bias, 20-day price bias, 20-day / 60-day MA ratio |
-| Volume | 20-day average volume, volume anomaly ratio |
-| Intraday Structure | Closing-price position, daily amplitude |
-| Momentum | 10-day cumulative return, 20-day cumulative return |
-| Breakout Measures | Breakout strength, distance from 20-day high |
+VIX and Gold/USD are further used to calculate:
 
-Bitcoin daily log return is defined as:
+- Daily log return
+- 5-day rate of change
+- 20-day rolling Z-score
 
-$$
-r_t = \ln(P_t) - \ln(P_{t-1})
-$$
-
-where \(P_t\) denotes the Bitcoin closing price at time \(t\).
+These features are used to assess market conditions by the models.
 
 ---
 
-## 3. Cross-Asset Features
+## 5. Trading Decision and Portfolio Allocation
 
-### VIX Features
+In terms of finally translating model predictions into portfolio positions, this study uses the probability output ($P_{sell}$) of the Sell-Risk Model and the probability output ($P_{buy}$) of the Buy-Opportunity Model to make the final trading decision.
 
-The framework incorporates:
+### 5.1 Sell-Risk Override
 
-- Daily VIX log return
-- 5-day VIX rate of change
-- 20-day VIX Z-score
+First, the model determines whether a full exit is required. If $P_{sell} > 0.17$, the Sell-Risk Model has override priority, and the target Bitcoin allocation is set to 0%.
 
-The rolling Z-score is defined as:
+This means that the model determines that the predicted downside risk of Bitcoin exceeds the predefined risk threshold, and Bitcoin exposure is therefore reduced to zero.
 
-$$
-Z_t =
-\frac{X_t-\mu_{20,t}}
-{\sigma_{20,t}}
-$$
+### 5.2 Buy-Opportunity Position Allocation
 
-### Gold/USD Features
+If $P_{sell} \le 0.17$, the model then uses the probability output ($P_{buy}$) from the Buy-Opportunity Model to determine the target Bitcoin allocation.
 
-The same transformations are applied to Gold/USD:
+The allocation is determined according to the following probability ranges:
 
-- Daily Gold log return
-- 5-day Gold rate of change
-- 20-day Gold Z-score
-
-These variables provide additional cross-asset information alongside Bitcoin-specific technical indicators.
-
----
-
-# Target Variable Construction
-
-## Sell-Risk Target
-
-For each date \(t\), the framework evaluates the minimum Bitcoin closing price over the following 10-day horizon.
-
-$$
-Y^{sell}_t =
-I
-\left[
-\min_{1\le h\le10}
-\left(
-\frac{P_{t+h}-P_t}{P_t}
-\right)
-\le -0.10
-\right]
-$$
-
-Therefore:
-
-- `1` = Bitcoin falls by at least 10% within the following 10 days
-- `0` = The event does not occur
-
----
-
-## Buy-Opportunity Target
-
-The Buy-Opportunity target evaluates the maximum Bitcoin closing price over the following 10-day horizon.
-
-$$
-Y^{buy}_t =
-I
-\left[
-\max_{1\le h\le10}
-\left(
-\frac{P_{t+h}-P_t}{P_t}
-\right)
-\ge 0.10
-\right]
-$$
-
-Therefore:
-
-- `1` = Bitcoin rises by at least 10% within the following 10 days
-- `0` = The event does not occur
-
-Both targets are treated as binary classification outcomes.
-
----
-
-# Dual Random Forest Models
-
-Both prediction models are implemented as probability-based **Ranger Random Forest** classifiers.
-
-## Model Configuration
-
-| Parameter | Sell-Risk Model | Buy-Opportunity Model |
-|:---|---:|---:|
-| Algorithm | Ranger Random Forest | Ranger Random Forest |
-| Number of Trees | 300 | 300 |
-| `mtry` | 3 | 10 |
-| Variable Importance | Impurity | Impurity |
-| Probability Output | Yes | Yes |
-| Random Seed | 42 | 42 |
-| Current Data Split | 80% Training / 20% Evaluation | 80% Training / 20% Evaluation |
-
----
-
-## Sell-Risk Model Features
-
-The Sell-Risk Model uses:
-
-1. 5-day volatility
-2. 10-day volatility
-3. Daily amplitude
-4. Breakout strength
-5. Distance from the 20-day high
-6. VIX daily return
-7. VIX 5-day change
-8. VIX 20-day Z-score
-9. Gold daily return
-10. Gold 5-day change
-11. Gold 20-day Z-score
-
----
-
-## Buy-Opportunity Model Features
-
-The Buy-Opportunity Model uses:
-
-1. 5-day volatility
-2. 10-day volatility
-3. Daily amplitude
-4. 20-day moving-average bias
-5. 20-day / 60-day moving-average ratio
-6. 10-day cumulative return
-7. 20-day cumulative return
-8. VIX daily return
-9. VIX 5-day change
-10. VIX 20-day Z-score
-11. Gold daily return
-12. Gold 5-day change
-13. Gold 20-day Z-score
-
----
-
-## Feature Timing and Chronological Split
-
-Selected predictive features are lagged by one day before model estimation:
-
-$$
-X_t^{model} = X_{t-1}
-$$
-
-The dataset is also split chronologically rather than randomly.
-
-The current exploratory implementation uses:
-
-- **80% Training**
-- **20% Evaluation**
-
-The evaluation segment is currently used for threshold sensitivity analysis as well as portfolio-performance inspection.
-
-Therefore, it should not yet be interpreted as a completely untouched final out-of-sample test set.
-
----
-
-# Threshold Sensitivity Analysis
-
-The probability outputs are evaluated under multiple decision thresholds.
-
-## Sell-Risk Threshold Grid
-
-$$
-th_{sell}\in\{0.05,0.07,\ldots,0.39\}
-$$
-
-## Buy-Opportunity Threshold Grid
-
-$$
-th_{buy}\in\{0.05,0.07,\ldots,0.59\}
-$$
-
-For each threshold, the exploratory analysis evaluates:
-
-- Accuracy
-- Recall
-- Precision
-- Number of signal days
-- Final wealth index
-- Maximum drawdown
-
-An exploratory utility score is also used:
-
-$$
-Score =
-FinalWealth
-+
-2 \times MaximumDrawdown
-$$
-
-where `FinalWealth` represents the normalized cumulative wealth index and Maximum Drawdown is expressed as a negative decimal value.
-
----
-
-# Dual-Signal Integration
-
-The Sell-Risk signal has override priority:
-
-$$
-P_{sell,t}>0.17
-\quad\Rightarrow\quad
-w_t=0
-$$
-
-where \(w_t\) represents the target Bitcoin allocation.
-
-When Sell-Risk does not exceed the threshold, Buy-Opportunity probability determines the target portfolio exposure.
-
-## Buy-Probability Position Mapping
-
-| Buy Probability | Target BTC Allocation |
-|---:|---:|
-| \(P_{buy}<0.30\) | 20% |
-| \(0.30\le P_{buy}<0.40\) | 40% |
-| \(0.40\le P_{buy}<0.50\) | 60% |
-| \(0.50\le P_{buy}<0.59\) | 80% |
-| \(P_{buy}\ge0.59\) | 100% |
-
-The overall decision rule is:
-
-$$
-w_t=
-\begin{cases}
-0, & P_{sell,t}>0.17 \\
-g(P_{buy,t}), & P_{sell,t}\le0.17
-\end{cases}
-$$
-
-where \(g(\cdot)\) represents the probability-to-position mapping function.
-
----
-
-# Transaction-Cost-Aware Execution Simulation
-
-The portfolio simulation starts with an initial capital of:
-
-**USD 100,000**
-
-The execution engine incorporates several practical trading constraints.
-
-| Parameter | Current Setting |
+| Buy-Opportunity Probability | Target Bitcoin Allocation |
 |:---|---:|
-| Initial Capital | USD 100,000 |
-| Sell-Risk Threshold | 0.17 |
-| Full-Position Buy Breakpoint | 0.59 |
-| Transaction Fee | 0.1% |
-| Minimum BTC Order | 0.001 BTC |
-| Minimum Gap Between Executed Trades | 5 days |
-| Position Adjustment Tolerance | 0.05 |
-| Maximum Position | 100% |
-| Short Selling | No |
-| Leverage | No |
+| $P_{buy} < 0.30$ | 20% |
+| $0.30 \le P_{buy} < 0.40$ | 40% |
+| $0.40 \le P_{buy} < 0.50$ | 60% |
+| $0.50 \le P_{buy} < 0.59$ | 80% |
+| $P_{buy} \ge 0.59$ | 100% |
 
-The current implementation explicitly models transaction fees but does **not** explicitly simulate bid-ask spread or execution slippage.
+Through this approach, the two models do not simply generate buy or sell signals. Instead, they jointly determine the final proportion of Bitcoin held in the portfolio.
 
 ---
 
-## Position Adjustment Tolerance
+## 6. Preliminary Backtesting Results
 
-A portfolio rebalance is considered only when:
+The preliminary backtesting results show that, during the Evaluation Period, the Bitcoin Buy-and-Hold strategy declined by approximately **33%**, while the Dual-Signal Strategy developed in this study declined by approximately **5%**.
 
-$$
-|w_t-w_t^{actual}|>0.05
-$$
+| Strategy | Approx. Return During Evaluation Period |
+|:---|---:|
+| Dual-Signal Strategy | **~-5%** |
+| Bitcoin Buy-and-Hold | **~-33%** |
+| Difference | **~+28 percentage points** |
 
-This prevents small portfolio-weight deviations from generating unnecessary transactions.
+Although the current strategy has not yet generated a positive absolute return, based on the model performance under the current conditions, its primary value is in reducing downside risk and limiting losses in asset value.
 
----
-
-## Trade Frequency Constraint
-
-Executed trades are subject to a minimum five-day interval:
-
-$$
-\Delta t \ge 5
-$$
-
-This restriction is designed to reduce excessive portfolio turnover and repeated transaction costs.
+Whether the model can further achieve the objective of generating positive absolute returns still requires further investigation in future research.
 
 ---
 
-# Buy-and-Hold Benchmark
+## 7. Evaluation-Period Portfolio Performance
 
-The Dual-Signal strategy is compared with a Bitcoin **Buy-and-Hold** benchmark.
+The following figure compares the portfolio value of the Dual-Signal Strategy with the Bitcoin Buy-and-Hold strategy during the Evaluation Period.
 
-The benchmark:
+![Evaluation-Period Backtest](figures/bitcoin_dual_signal_backtest.png)
 
-1. begins with the same USD 100,000 initial capital;
-2. purchases Bitcoin at the beginning of the evaluation period;
-3. includes the same 0.1% initial transaction fee;
-4. holds Bitcoin throughout the remaining evaluation period.
+**Figure 1. Evaluation-period portfolio value of the Dual-Signal Strategy and Bitcoin Buy-and-Hold strategy.**
 
 ---
 
-# Empirical Results
+## 8. Trade Execution Records
 
-## Evaluation-Period Backtest
-
-The current exploratory evaluation covers a period in which Bitcoin declined substantially.
-
-During this evaluation period:
-
-- Bitcoin Buy-and-Hold declined by approximately **33%**
-- The Dual-Signal Strategy declined by approximately **5%**
-
-| Metric | Dual-Signal Strategy | Buy-and-Hold |
-|:---|---:|---:|
-| Approx. Total Return | **~-5%** | **~-33%** |
-| Approx. Relative Improvement | **+28 percentage points** | — |
-| Primary Observed Benefit | Downside-risk mitigation | Full market exposure |
-
-The strategy did **not** generate a positive absolute return during the evaluation period.
-
-Its primary observed benefit was **capital preservation and reduced downside exposure relative to the passive Bitcoin benchmark**.
-
-These figures remain exploratory and will be updated after the final validation and holdout-test design is completed.
-
----
-
-## Portfolio Equity Curve
-
-The following figure compares the portfolio value of the Dual-Signal Strategy with the Bitcoin Buy-and-Hold benchmark during the evaluation period.
-
-**Figure 1. Evaluation-period portfolio value of the Dual-Signal Strategy and Bitcoin Buy-and-Hold benchmark.**
-<img width="734" height="358" alt="Image" src="https://github.com/user-attachments/assets/04e7d073-689e-4e77-a17c-ed07043d6897" />
-During the evaluated bearish period, the Dual-Signal framework maintained materially higher portfolio value than the passive benchmark, consistent with its downside-risk-control objective.
-
----
-
-## Trade Execution Records
-
-The table below presents the first five executed trades generated by the backtesting engine.
+The table below presents the first five executed trades generated during the Evaluation Period.
 
 | Date | Action | BTC Price (USD) | Trade Quantity (BTC) | BTC Holdings | Cash (USD) | Total Assets (USD) | Days Since Previous Trade |
 |:---|:---|---:|---:|---:|---:|---:|---:|
@@ -489,145 +147,44 @@ The table below presents the first five executed trades generated by the backtes
 | 2024-12-14 | Establish 100% Position | 101,372.97 | 0.9820 | 0.9820 | 0.00 | 99,546.99 | 5 |
 | 2024-12-19 | Fully Exit Position | 97,490.95 | 0.9820 | 0.0000 | 95,639.16 | 95,639.16 | 5 |
 
-These records illustrate how the strategy dynamically adjusts Bitcoin exposure in response to the combined Sell-Risk and Buy-Opportunity signals while respecting the minimum five-day execution interval.
-
-The complete trade execution record is provided in the **Appendix**.
+The complete trade execution record is provided in **Appendix A**.
 
 ---
 
-## Model Probability Diagnostics
+## 9. Current Limitations and Future Research
 
-The framework also produces daily probability series for:
+The current study still has several limitations.
 
-### Sell-Risk Probability
+At this stage, the model uses a time-series data split of:
 
-$$
-P_{sell,t}
-$$
+- **80% Training**
+- **20% Evaluation**
 
-with the current risk threshold:
+In future revisions, independent **Validation** and **Final Test** periods will be further established to provide a more complete evaluation of the model’s performance on previously unused data.
 
-$$
-th_{sell}=0.17
-$$
-
-### Buy-Opportunity Probability
-
-$$
-P_{buy,t}
-$$
-
-with the current full-position breakpoint:
-
-$$
-th_{buy}=0.59
-$$
-
-These probability outputs are used to inspect how the two specialized models respond across different market conditions.
-
-Additional probability, threshold-sensitivity, and feature-importance figures will be added as the working-paper analysis is finalized.
+In addition, more international market indicators will be considered as features in future research to further examine whether information from different markets can improve the model’s ability to identify Bitcoin upside opportunities and downside risks.
 
 ---
 
-## Performance Metrics Tracked
+# Appendix
 
-The portfolio evaluation records:
+## Appendix A. Complete Trade Execution Record
 
-| Metric | Description |
-|:---|:---|
-| Final Capital | Portfolio value at the end of the evaluation period |
-| Total Return | Percentage change from initial capital |
-| Maximum Drawdown | Maximum peak-to-trough portfolio decline |
-| Number of Trades | Number of executed portfolio adjustments |
-| Average Trade Interval | Average days between executed trades |
-| Average Target Position | Mean model-generated Bitcoin allocation |
-| Average Actual Position | Mean realized Bitcoin exposure |
+The complete simulated trade execution history from the Evaluation Period is available in the following CSV file:
+
+[**View Complete Trade Execution Record (CSV)**](appendix/trade_execution_log.csv)
 
 ---
 
-# Current Methodological Limitations
+## Repository Structure
 
-This repository presents an **exploratory academic portfolio version** of the research.
-
-The current implementation uses a chronological:
-
-**80% Training / 20% Evaluation**
-
-split.
-
-The 20% evaluation period is currently used both for:
-
-- threshold sensitivity analysis;
-- and inspection of strategy performance.
-
-Therefore, the current evaluation period should **not** be interpreted as a completely untouched final out-of-sample test.
-
-The formal working-paper design will separate the dataset into:
-
-- **60% Training:** Model estimation
-- **20% Validation:** Threshold and hyperparameter selection
-- **20% Final Test:** Untouched final portfolio evaluation
-
-Because both target variables depend on a 10-day forward horizon, a purge interval around sample boundaries will also be considered.
-
----
-
-# Future Research
-
-Planned extensions include:
-
-- Training / Validation / Final-Test separation
-- Walk-forward validation
-- Probability calibration
-- Permutation-based feature importance
-- Logistic Regression or other benchmark models
-- Joint Buy/Sell threshold sensitivity analysis
-- Alternative probability-to-position mappings
-- Explicit execution-slippage assumptions
-- Additional volatile financial assets
-- Conditional or market-state-gated dual-signal models
-
----
-
-# Repository Scope
-
-This public repository is intended as an **academic research showcase**.
-
-The underlying:
-
-- source code;
-- raw financial datasets;
-- complete trade logs;
-- model-development experiments;
-- and unreleased research extensions
-
-are maintained privately.
-
-This repository therefore focuses on the:
-
-- research motivation;
-- methodology;
-- model architecture;
-- portfolio decision framework;
-- evaluation design;
-- and selected empirical results.
-
----
-
-# Copyright
-
-Copyright © 2026 Aiden Li (Chia-Yu Li). All rights reserved.
-
-This repository is provided for academic review and portfolio demonstration purposes only.
-
-No permission is granted to reproduce, redistribute, modify, or commercially use the underlying research materials without prior written permission from the author.
-
----
-
-# Disclaimer
-
-This project is intended solely for academic research and educational purposes.
-
-It does not constitute financial advice, investment advice, or a recommendation to buy or sell Bitcoin or any other financial asset.
-
-Historical backtest results do not guarantee future performance.
+```text
+Bitcoin-Dual-Signal-Quantitative-Framework/
+│
+├── README.md
+│
+├── figures/
+│   └── bitcoin_dual_signal_backtest.png
+│
+└── appendix/
+    └── trade_execution_log.csv
